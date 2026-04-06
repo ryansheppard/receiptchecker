@@ -1,18 +1,9 @@
-import base64
-import io
 import os
-from typing import Annotated
+from typing import Annotated, cast
 
 from anthropic import AsyncAnthropic
-from anthropic.types import (
-    Base64ImageSourceParam,
-    ImageBlockParam,
-    MessageParam,
-    TextBlock,
-    TextBlockParam,
-)
+from anthropic.types import MessageParam, TextBlock, TextBlockParam
 from fastapi import FastAPI, File
-from PIL import Image, ImageOps  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
 
 app = FastAPI()
@@ -26,6 +17,9 @@ PROMPT = (
     "'PLNT OAT MLK' → 'oat milk', 'CAROLINA BROWN RICE' → 'brown rice'). "
     "Assign a confidence score (0.0–1.0) per item and an overall confidence for the extraction."
 )
+
+_FILES_BETA = "files-api-2025-04-14"
+_STRUCTURED_BETA = "structured-outputs-2025-11-13"
 
 
 class Item(BaseModel):
@@ -46,59 +40,45 @@ class Output(BaseModel):
     confidence: float
 
 
-_MAX_BYTES = 5 * 1024 * 1024  # 5 MB API limit
-
-
-def _compress(data: bytes) -> bytes:
-    img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")  # type: ignore[union-attr]
-    for quality in range(95, 15, -10):
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=quality)
-        result = buf.getvalue()
-        if len(result) <= _MAX_BYTES:
-            return result
-    # Still too large — scale down proportionally and encode at q=85
-    scale = (_MAX_BYTES / len(data)) ** 0.5
-    img = img.resize(
-        (int(img.width * scale), int(img.height * scale)), Image.Resampling.LANCZOS
-    )  # type: ignore[attr-defined]
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    return buf.getvalue()
+def _media_type(data: bytes) -> str:
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data[:4] == b"GIF8":
+        return "image/gif"
+    return "image/jpeg"
 
 
 @app.post("/receipt")
 async def handle_receipt(file: Annotated[bytes, File()]):
-    image_bytes = _compress(file)
-    image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
-
-    message = await client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=1024,
-        extra_headers={"anthropic-beta": "structured-outputs-2025-11-13"},
-        extra_body={
-            "output_format": {
-                "type": "json_schema",
-                "schema": Output.model_json_schema(),
-            }
-        },
-        messages=[
-            MessageParam(
-                role="user",
-                content=[
-                    ImageBlockParam(
-                        type="image",
-                        source=Base64ImageSourceParam(
-                            type="base64",
-                            media_type="image/jpeg",
-                            data=image_data,
-                        ),
-                    ),
-                    TextBlockParam(type="text", text=PROMPT),
-                ],
-            )
-        ],
+    uploaded = await client.beta.files.upload(
+        file=("receipt", file, _media_type(file)),
+        betas=[_FILES_BETA],
     )
+    try:
+        message = await client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1024,
+            extra_headers={"anthropic-beta": f"{_STRUCTURED_BETA},{_FILES_BETA}"},
+            extra_body={
+                "output_format": {
+                    "type": "json_schema",
+                    "schema": Output.model_json_schema(),
+                }
+            },
+            messages=cast(list[MessageParam], [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "file", "file_id": uploaded.id}},
+                        TextBlockParam(type="text", text=PROMPT),
+                    ],
+                }
+            ]),
+        )
+    finally:
+        await client.beta.files.delete(uploaded.id, betas=[_FILES_BETA])
 
     block = message.content[0]
     assert isinstance(block, TextBlock)
