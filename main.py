@@ -1,12 +1,12 @@
 import os
 from datetime import date
-from typing import Annotated, cast
+from typing import cast
 
 import gspread
 import polars as pl
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock, TextBlockParam
-from fastapi import FastAPI, File
+from fastapi import FastAPI, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
@@ -66,9 +66,10 @@ async def index():
 
 
 @app.post("/receipt")
-async def handle_receipt(file: Annotated[bytes, File()]):
+async def handle_receipt(file: UploadFile):
+    data = await file.read()
     uploaded = await client.beta.files.upload(
-        file=("receipt", file, _media_type(file)),
+        file=("receipt", data, file.content_type),
         betas=[_FILES_BETA],
     )
     try:
@@ -142,12 +143,3 @@ async def handle_submit(output: Output):
     ws.append_rows(rows)
     return {"url": sh.url}
 
-
-def _media_type(data: bytes) -> str:
-    if data[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    if data[:4] == b"GIF8":
-        return "image/gif"
-    return "image/jpeg"
