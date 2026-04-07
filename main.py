@@ -1,9 +1,11 @@
+import hashlib
 import os
 from datetime import date
 from typing import cast
 
 import gspread
 import polars as pl
+import redis.asyncio as redis
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock, TextBlockParam
 from fastapi import FastAPI, UploadFile
@@ -16,9 +18,11 @@ _FILES_BETA = "files-api-2025-04-14"
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+anthropic_client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 sheets_client = gspread.service_account()
+
+redis_client = redis.Redis()
 
 
 class Item(BaseModel):
@@ -68,12 +72,17 @@ async def index():
 @app.post("/receipt")
 async def handle_receipt(file: UploadFile):
     data = await file.read()
-    uploaded = await client.beta.files.upload(
+    digest = hashlib.sha256(data).hexdigest()
+    value = await redis_client.get(digest)
+    if value:
+        return Output.model_validate_json(value)
+
+    uploaded = await anthropic_client.beta.files.upload(
         file=("receipt", data, file.content_type),
         betas=[_FILES_BETA],
     )
     try:
-        transcription = await client.messages.create(
+        transcription = await anthropic_client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=2048,
             extra_headers={"anthropic-beta": _FILES_BETA},
@@ -94,11 +103,11 @@ async def handle_receipt(file: UploadFile):
             ),
         )
     finally:
-        await client.beta.files.delete(uploaded.id, betas=[_FILES_BETA])
+        await anthropic_client.beta.files.delete(uploaded.id, betas=[_FILES_BETA])
 
     raw_text = cast(TextBlock, transcription.content[0]).text
 
-    message = await client.messages.create(
+    message = await anthropic_client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=1024,
         extra_body={
@@ -123,7 +132,9 @@ async def handle_receipt(file: UploadFile):
     )
 
     block = cast(TextBlock, message.content[0])
-    return Output.model_validate_json(block.text)
+    output = Output.model_validate_json(block.text)
+    await redis_client.set(digest, output.model_dump_json(), 3600)
+    return output
 
 
 @app.post("/submit")
@@ -142,4 +153,3 @@ async def handle_submit(output: Output):
         rows = [df.columns] + rows
     ws.append_rows(rows)
     return {"url": sh.url}
-

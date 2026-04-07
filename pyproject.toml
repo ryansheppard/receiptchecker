@@ -10,6 +10,7 @@ dependencies = [
     "gspread>=6.2.1",
     "polars>=1.39.3",
     "python-multipart>=0.0.24",
+    "redis>=7.4.0",
 ]
 
 [dependency-groups]
