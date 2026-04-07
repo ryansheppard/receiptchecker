@@ -18,6 +18,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
+sheets_client = gspread.service_account()
+
 
 class Item(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -126,8 +128,7 @@ async def handle_receipt(file: Annotated[bytes, File()]):
 @app.post("/submit")
 async def handle_submit(output: Output):
     today = date.today()
-    gc = gspread.service_account()
-    sh = gc.open("Receipt Checker")
+    sh = sheets_client.open("Receipt Checker")
     ws = sh.worksheet("raw")
     is_empty = not any(ws.get_all_values())
     df = pl.DataFrame(
