@@ -11,16 +11,32 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
+_FILES_BETA = "files-api-2025-04-14"
+_STRUCTURED_BETA = "structured-outputs-2025-11-13"
+
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
-@app.get("/")
-async def index():
-    return FileResponse("static/index.html")
-
-
 client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+
+class Item(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    price: float
+    category: str
+    raw: str
+    confidence: float
+
+
+class Output(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    total: float
+    items: list[Item]
+    confidence: float
+
 
 TRANSCRIBE_PROMPT = (
     "Transcribe this receipt verbatim, preserving the exact layout including line breaks, "
@@ -42,36 +58,10 @@ PARSE_PROMPT = (
     "Receipt text:\n"
 )
 
-_FILES_BETA = "files-api-2025-04-14"
-_STRUCTURED_BETA = "structured-outputs-2025-11-13"
 
-
-class Item(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str
-    price: float
-    category: str
-    raw: str
-    confidence: float
-
-
-class Output(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    total: float
-    items: list[Item]
-    confidence: float
-
-
-def _media_type(data: bytes) -> str:
-    if data[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    if data[:4] == b"GIF8":
-        return "image/gif"
-    return "image/jpeg"
+@app.get("/")
+async def index():
+    return FileResponse("static/index.html")
 
 
 @app.post("/receipt")
@@ -143,8 +133,20 @@ async def handle_submit(output: Output):
     df = pl.DataFrame(
         [item.model_dump(exclude={"confidence"}) for item in output.items]
     ).with_columns(pl.lit(today).alias("date"))
-    rows = [[v if isinstance(v, (int, float)) else str(v) for v in row] for row in df.rows()]
+    rows = [
+        [v if isinstance(v, (int, float)) else str(v) for v in row] for row in df.rows()
+    ]
     if is_empty:
         rows = [df.columns] + rows
     ws.append_rows(rows)
     return {"url": sh.url}
+
+
+def _media_type(data: bytes) -> str:
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data[:4] == b"GIF8":
+        return "image/gif"
+    return "image/jpeg"
