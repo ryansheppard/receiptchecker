@@ -130,7 +130,7 @@ async def handle_submit(output: Output):
     today = date.today()
     sh = sheets_client.open("Receipt Checker")
     ws = sh.worksheet("raw")
-    is_empty = not any(ws.get_all_values())
+    is_empty = not any(ws.row_values(1))
     df = pl.DataFrame(
         [item.model_dump(exclude={"confidence"}) for item in output.items]
     ).with_columns(pl.lit(today).alias("date"))
