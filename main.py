@@ -1,21 +1,45 @@
 import os
+from datetime import date
 from typing import Annotated, cast
 
+import gspread
+import polars as pl
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock, TextBlockParam
 from fastapi import FastAPI, File
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/")
+async def index():
+    return FileResponse("static/index.html")
+
 
 client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-PROMPT = (
-    "Extract the receipt contents. For each item, translate abbreviated or coded names to their "
-    "generic common name — strip all brand names and return only the product description "
-    "(e.g. 'DAWN DISH SOAP' → 'dish soap', 'CHKN BRST' → 'chicken breast', "
+TRANSCRIBE_PROMPT = (
+    "Transcribe this receipt verbatim, preserving the exact layout including line breaks, "
+    "spacing, and all characters. Do not interpret or summarize — output the raw text only."
+)
+
+PARSE_PROMPT = (
+    "Parse the following receipt text into structured data. For each item, translate abbreviated "
+    "or coded names to their generic common name — strip all brand names and return only the "
+    "product description (e.g. 'DAWN DISH SOAP' → 'dish soap', 'CHKN BRST' → 'chicken breast', "
     "'PLNT OAT MLK' → 'oat milk', 'CAROLINA BROWN RICE' → 'brown rice'). "
-    "Assign a confidence score (0.0–1.0) per item and an overall confidence for the extraction."
+    "Some items span two lines: the item name appears on one line with no price, and the next line "
+    "shows 'N @ unit_price  total' — this is one item whose price is the TOTAL (the rightmost "
+    "number on the second line), not the unit price. Do not emit a separate item for the quantity "
+    "line. "
+    "Include savings and discounts (e.g. loyalty rewards, coupons) as items with negative prices "
+    "and include sales tax as an item with a positive price, so the item prices sum to the receipt total. "
+    "Assign a confidence score (0.0–1.0) per item and an overall confidence for the extraction.\n\n"
+    "Receipt text:\n"
 )
 
 _FILES_BETA = "files-api-2025-04-14"
@@ -57,29 +81,70 @@ async def handle_receipt(file: Annotated[bytes, File()]):
         betas=[_FILES_BETA],
     )
     try:
-        message = await client.messages.create(
+        transcription = await client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=1024,
-            extra_headers={"anthropic-beta": f"{_STRUCTURED_BETA},{_FILES_BETA}"},
-            extra_body={
-                "output_format": {
-                    "type": "json_schema",
-                    "schema": Output.model_json_schema(),
-                }
-            },
-            messages=cast(list[MessageParam], [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "source": {"type": "file", "file_id": uploaded.id}},
-                        TextBlockParam(type="text", text=PROMPT),
-                    ],
-                }
-            ]),
+            extra_headers={"anthropic-beta": _FILES_BETA},
+            messages=cast(
+                list[MessageParam],
+                [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {"type": "file", "file_id": uploaded.id},
+                            },
+                            TextBlockParam(type="text", text=TRANSCRIBE_PROMPT),
+                        ],
+                    }
+                ],
+            ),
         )
     finally:
         await client.beta.files.delete(uploaded.id, betas=[_FILES_BETA])
 
-    block = message.content[0]
-    assert isinstance(block, TextBlock)
+    raw_text = cast(TextBlock, transcription.content[0]).text
+
+    message = await client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=1024,
+        extra_headers={"anthropic-beta": _STRUCTURED_BETA},
+        extra_body={
+            "output_format": {
+                "type": "json_schema",
+                "schema": Output.model_json_schema(),
+            }
+        },
+        messages=cast(
+            list[MessageParam],
+            [
+                {
+                    "role": "user",
+                    "content": [
+                        TextBlockParam(type="text", text=PARSE_PROMPT + raw_text),
+                    ],
+                }
+            ],
+        ),
+    )
+
+    block = cast(TextBlock, message.content[0])
     return Output.model_validate_json(block.text)
+
+
+@app.post("/submit")
+async def handle_submit(output: Output):
+    today = date.today()
+    gc = gspread.service_account()
+    sh = gc.open("Receipt Checker")
+    ws = sh.worksheet("raw")
+    is_empty = not any(ws.get_all_values())
+    df = pl.DataFrame(
+        [item.model_dump(exclude={"confidence"}) for item in output.items]
+    ).with_columns(pl.lit(today).alias("date"))
+    rows = [[v if isinstance(v, (int, float)) else str(v) for v in row] for row in df.rows()]
+    if is_empty:
+        rows = [df.columns] + rows
+    ws.append_rows(rows)
+    return {"url": sh.url}
