@@ -12,7 +12,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 _FILES_BETA = "files-api-2025-04-14"
-_STRUCTURED_BETA = "structured-outputs-2025-11-13"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -99,11 +98,12 @@ async def handle_receipt(file: Annotated[bytes, File()]):
     message = await client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=1024,
-        extra_headers={"anthropic-beta": _STRUCTURED_BETA},
         extra_body={
-            "output_format": {
-                "type": "json_schema",
-                "schema": Output.model_json_schema(),
+            "output_config": {
+                "format": {
+                    "type": "json_schema",
+                    "schema": Output.model_json_schema(),
+                }
             }
         },
         messages=cast(
