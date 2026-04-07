@@ -74,7 +74,7 @@ async def handle_receipt(file: Annotated[bytes, File()]):
     try:
         transcription = await client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=1024,
+            max_tokens=2048,
             extra_headers={"anthropic-beta": _FILES_BETA},
             messages=cast(
                 list[MessageParam],
