@@ -227,6 +227,11 @@
     }
     .toast.error { background: #ff3b30; }
     .toast.show { opacity: 1; }
+
+    @media (min-width: 900px) {
+      nav, #content { max-width: 960px; }
+      #content { display: grid; grid-template-columns: 3fr 2fr; align-items: start; }
+    }
   </style>
 </head>
 <body>

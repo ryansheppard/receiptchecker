@@ -110,6 +110,13 @@
       font-weight: 500;
     }
     #empty a:hover { text-decoration: underline; }
+
+    @media (min-width: 900px) {
+      nav, #content { max-width: 960px; }
+      .stat-grid { grid-template-columns: repeat(4, 1fr); }
+      #charts { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; }
+      #charts > .card:first-child { grid-column: span 2; }
+    }
   </style>
 </head>
 <body>
@@ -274,7 +281,7 @@
             },
             y: {
               grid: { display: false },
-              ticks: { font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' } },
+              ticks: { autoSkip: false, font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' } },
             },
           },
         },
