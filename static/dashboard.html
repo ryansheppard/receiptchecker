@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard · Receipt</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    nav {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; color: #1d1d1f; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 500;
+      color: #6e6e73;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover, .nav-link.active { background: #e8e8ed; color: #1d1d1f; }
+
+    #content {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .card-title {
+      font-size: .75rem;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 16px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stat-label {
+      font-size: .75rem;
+      font-weight: 500;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1d1d1f;
+      line-height: 1.2;
+    }
+    .stat-value.small { font-size: 1.1rem; }
+
+    #empty {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 64px 0;
+      color: #6e6e73;
+      font-size: .95rem;
+      text-align: center;
+    }
+    #empty a {
+      color: #007aff;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    #empty a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Receipt</span>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Scan</a>
+      <a href="/dashboard" class="nav-link active">Dashboard</a>
+    </div>
+  </nav>
+
+  <div id="content">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Spent</span>
+        <span class="stat-value" id="stat-total">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Receipts</span>
+        <span class="stat-value" id="stat-count">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Avg Receipt</span>
+        <span class="stat-value" id="stat-avg">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Top Category</span>
+        <span class="stat-value small" id="stat-category">—</span>
+      </div>
+    </div>
+
+    <div id="charts" style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-title">Spending Over Time</div>
+        <canvas id="time-chart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Spending by Category</div>
+        <canvas id="category-chart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Items</div>
+        <canvas id="items-chart"></canvas>
+      </div>
+    </div>
+
+    <div id="empty">
+      <span>No receipts yet.</span>
+      <a href="/">Scan your first receipt →</a>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = ['#007aff','#34c759','#ff9500','#ff3b30','#af52de','#5ac8fa','#ffcc00','#ff2d55'];
+
+    async function load() {
+      const res = await fetch('/stats');
+      const data = await res.json();
+      const { summary, price_by_categories, top_items, spending_over_time } = data;
+
+      document.getElementById('stat-total').textContent = '$' + summary.total_spent.toFixed(2);
+      document.getElementById('stat-count').textContent = summary.receipt_count;
+      document.getElementById('stat-avg').textContent = '$' + summary.avg_receipt_total.toFixed(2);
+      document.getElementById('stat-category').textContent = summary.most_common_category;
+
+      if (summary.receipt_count === 0) {
+        document.getElementById('charts').style.display = 'none';
+        document.getElementById('empty').style.display = 'flex';
+        return;
+      }
+
+      renderSpendingChart(spending_over_time);
+      renderCategoryChart(price_by_categories);
+      renderItemsChart(top_items);
+    }
+
+    function renderSpendingChart(spending_over_time) {
+      new Chart(document.getElementById('time-chart'), {
+        type: 'bar',
+        data: {
+          labels: spending_over_time.map(([d]) => d),
+          datasets: [{
+            data: spending_over_time.map(([, v]) => v),
+            backgroundColor: '#007aff',
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}` } },
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              ticks: { callback: v => '$' + v },
+              grid: { color: '#f0f0f0' },
+            },
+          },
+        },
+      });
+    }
+
+    function renderCategoryChart(price_by_categories) {
+      let entries = Object.entries(price_by_categories).sort((a, b) => b[1] - a[1]);
+
+      if (entries.length > 8) {
+        const top = entries.slice(0, 8);
+        const otherTotal = entries.slice(8).reduce((sum, [, v]) => sum + v, 0);
+        entries = [...top, ['Other', otherTotal]];
+      }
+
+      new Chart(document.getElementById('category-chart'), {
+        type: 'doughnut',
+        data: {
+          labels: entries.map(([k]) => k),
+          datasets: [{
+            data: entries.map(([, v]) => v),
+            backgroundColor: COLORS.slice(0, entries.length),
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', size: 12 }, padding: 16 } },
+            tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.toFixed(2)}` } },
+          },
+        },
+      });
+    }
+
+    function renderItemsChart(top_items) {
+      if (!top_items.length) {
+        document.getElementById('items-chart').closest('.card').style.display = 'none';
+        return;
+      }
+
+      const labels = top_items.map(i => i.name);
+      const values = top_items.map(i => i.total_spent);
+
+      new Chart(document.getElementById('items-chart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: '#007aff',
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.x.toFixed(2)}` } },
+          },
+          scales: {
+            x: {
+              ticks: { callback: v => '$' + v },
+              grid: { color: '#f0f0f0' },
+            },
+            y: {
+              grid: { display: false },
+              ticks: { font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' } },
+            },
+          },
+        },
+      });
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -12,3 +12,8 @@ app.include_router(router)
 @app.get("/")
 async def index():
     return FileResponse("static/index.html")
+
+
+@app.get("/dashboard")
+async def dashboard():
+    return FileResponse("static/dashboard.html")

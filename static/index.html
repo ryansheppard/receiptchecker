@@ -235,10 +235,37 @@
       padding: 12px 16px;
       font-size: .875rem;
     }
+
+    nav {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; color: #1d1d1f; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 500;
+      color: #6e6e73;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover, .nav-link.active { background: #e8e8ed; color: #1d1d1f; }
   </style>
 </head>
 <body>
-  <h1>Receipt</h1>
+  <nav>
+    <span class="nav-brand">Receipt</span>
+    <div class="nav-links">
+      <a href="/" class="nav-link active">Scan</a>
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+    </div>
+  </nav>
 
   <div id="upload-area">
     <div id="preview"><img id="preview-img" alt="Receipt preview"></div>

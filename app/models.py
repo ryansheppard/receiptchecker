@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, Relationship, SQLModel
@@ -27,7 +28,9 @@ class Receipt(SQLModel, table=True):
     total: float
     items: list["Item"] = Relationship(back_populates="receipt")
     confidence: float
-    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    submitted_at: datetime = Field(
+        default_factory=lambda: datetime.now(ZoneInfo("America/New_York"))
+    )
 
 
 class Item(SQLModel, table=True):
@@ -39,3 +42,23 @@ class Item(SQLModel, table=True):
     raw: str
     confidence: float
     receipt: Receipt | None = Relationship(back_populates="items")
+
+
+class Summary(BaseModel):
+    total_spent: float
+    receipt_count: int
+    avg_receipt_total: float
+    most_common_category: str
+
+
+class TopItem(BaseModel):
+    name: str
+    total_spent: float
+    times_purchased: int
+
+
+class Stats(BaseModel):
+    summary: Summary
+    price_by_categories: dict[str, float]
+    top_items: list[TopItem]
+    spending_over_time: list[tuple[date, float]]
