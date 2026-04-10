@@ -209,6 +209,12 @@
     button.submit-btn:active { opacity: .75; }
     button.submit-btn:disabled { background: #c7c7cc; cursor: default; }
 
+    #success-detail {
+      color: #6e6e73;
+      font-size: .875rem;
+      font-weight: 400;
+    }
+
     #success {
       display: none;
       flex-direction: column;
@@ -281,13 +287,13 @@
       </div>
     </div>
     <div id="error-msg-review"></div>
-    <button class="submit-btn" id="submit-btn">Save to Sheets</button>
+    <button class="submit-btn" id="submit-btn">Save</button>
   </div>
 
   <div id="success">
     <div class="check">✓</div>
     <span>Saved!</span>
-    <a id="sheet-link" href="#" target="_blank" rel="noopener" style="color:#007aff;font-size:.9rem">Open Sheet</a>
+    <span id="success-detail"></span>
     <button class="file-btn" style="margin-top:8px" onclick="reset()">Scan another</button>
   </div>
 
@@ -426,14 +432,15 @@
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(`Server error ${res.status}`);
-        const { url } = await res.json();
-        document.getElementById('sheet-link').href = url;
+        const saved = await res.json();
+        document.getElementById('success-detail').textContent =
+          `#${saved.id} · $${saved.total.toFixed(2)} · ${new Date(saved.submitted_at).toLocaleString()}`;
         review.style.display = 'none';
         success.style.display = 'flex';
       } catch (e) {
         showReviewError(e.message || 'Failed to save. Please try again.');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save to Sheets';
+        submitBtn.textContent = 'Save';
       }
     });
 
