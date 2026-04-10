@@ -152,7 +152,7 @@ async def similar_items(threshold: float = 80) -> list[list[str]]:
     adj: dict[int, set[int]] = {i: set() for i in range(n)}
     for i in range(n):
         for j in range(i + 1, n):
-            if fuzz.token_sort_ratio(names[i], names[j]) >= threshold:
+            if fuzz.token_set_ratio(names[i], names[j]) >= threshold:
                 adj[i].add(j)
                 adj[j].add(i)
 
