@@ -19,7 +19,7 @@ async def handle_receipt(file: UploadFile) -> ParsedReceipt:
     if value:
         return ParsedReceipt.model_validate_json(value)
 
-    parsed = await parse_receipt(data, file.content_type)
+    parsed = await parse_receipt(data, file.content_type or "image/jpeg")
     await redis_client.set(digest, parsed.model_dump_json(), 3600)
     return parsed
 

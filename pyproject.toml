@@ -22,3 +22,6 @@ dev = [
 
 [tool.ruff]
 exclude = ["migrations/versions"]
+
+[tool.ty.src]
+exclude = ["migrations/versions"]

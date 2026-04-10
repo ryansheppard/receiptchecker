@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, Relationship, SQLModel
@@ -27,7 +27,7 @@ class Receipt(SQLModel, table=True):
     total: float
     items: list["Item"] = Relationship(back_populates="receipt")
     confidence: float
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Item(SQLModel, table=True):
