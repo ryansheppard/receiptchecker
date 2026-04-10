@@ -9,6 +9,7 @@ dependencies = [
     "anthropic>=0.89.0",
     "fastapi[standard]>=0.135.3",
     "python-multipart>=0.0.24",
+    "rapidfuzz>=3.14.5",
     "redis>=7.4.0",
     "sqlalchemy>=2.0.49",
     "sqlmodel>=0.0.38",

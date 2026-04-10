@@ -1,13 +1,24 @@
 import hashlib
 from datetime import date
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 from pydantic import BaseModel
+from rapidfuzz import fuzz
 from sqlmodel import Session, func, select
 
 from app.anthropic import parse_receipt, redis_client
 from app.database import engine
-from app.models import Item, ParsedItem, ParsedReceipt, Receipt, Stats, Summary, TopItem
+from app.models import (
+    Item,
+    ItemStat,
+    ParsedItem,
+    ParsedReceipt,
+    Receipt,
+    RenameRequest,
+    Stats,
+    Summary,
+    TopItem,
+)
 
 router = APIRouter()
 
@@ -102,3 +113,64 @@ async def stats() -> Stats:
                 (date.fromisoformat(row[0]), row[1]) for row in spending_over_time
             ],
         )
+
+
+@router.get("/api/items")
+async def items() -> list[ItemStat]:
+    with Session(engine) as session:
+        rows = session.exec(
+            select(Item.name, func.count(), func.sum(Item.price))
+            .group_by(Item.name)
+            .order_by(Item.name)
+        ).all()
+
+        return [
+            ItemStat(name=r[0], count=r[1], total_spent=round(r[2], 2)) for r in rows
+        ]
+
+
+@router.patch("/api/items/rename")
+async def rename_items(body: RenameRequest) -> dict[str, int]:
+    new_name = body.new_name.strip()
+    if not new_name:
+        raise HTTPException(status_code=422, detail="new_name must not be empty")
+    with Session(engine) as session:
+        items = session.exec(select(Item).where(Item.name == body.old_name)).all()
+        for item in items:
+            item.name = new_name
+            session.add(item)
+        session.commit()
+    return {"updated": len(items)}
+
+
+@router.get("/api/items/similar")
+async def similar_items(threshold: float = 80) -> list[list[str]]:
+    with Session(engine) as session:
+        names = session.exec(select(Item.name).distinct().order_by(Item.name)).all()
+
+    n = len(names)
+    adj: dict[int, set[int]] = {i: set() for i in range(n)}
+    for i in range(n):
+        for j in range(i + 1, n):
+            if fuzz.token_sort_ratio(names[i], names[j]) >= threshold:
+                adj[i].add(j)
+                adj[j].add(i)
+
+    visited: set[int] = set()
+    clusters: list[list[str]] = []
+    for start in range(n):
+        if start in visited or not adj[start]:
+            continue
+        queue = [start]
+        component: list[str] = []
+        while queue:
+            node = queue.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            component.append(names[node])
+            queue.extend(adj[node] - visited)
+        if len(component) > 1:
+            clusters.append(sorted(component))
+
+    return clusters

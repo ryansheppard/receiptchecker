@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Items · Receipt</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    nav {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; color: #1d1d1f; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 500;
+      color: #6e6e73;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover, .nav-link.active { background: #e8e8ed; color: #1d1d1f; }
+
+    #content {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .card-title {
+      font-size: .75rem;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-header .card-title { margin-bottom: 0; }
+
+    input[type="search"], input[type="text"] {
+      border: 1.5px solid #d1d1d6;
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: .875rem;
+      font-family: inherit;
+      outline: none;
+      background: #fff;
+      transition: border-color .15s;
+    }
+    input[type="search"]:focus, input[type="text"]:focus { border-color: #007aff; }
+
+    #search { width: 160px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem;
+    }
+    th {
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding: 0 6px 10px;
+    }
+    th:last-child, td:last-child { text-align: right; }
+    th:nth-child(2), td:nth-child(2) { text-align: right; }
+
+    td {
+      padding: 8px 6px;
+      border-top: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+
+    .name-cell { display: flex; align-items: center; gap: 6px; }
+    .name-display {
+      flex: 1;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 6px;
+      transition: background .12s;
+    }
+    .name-display:hover { background: #f5f5f7; }
+
+    .name-input {
+      flex: 1;
+      border: 1.5px solid #007aff;
+      border-radius: 6px;
+      padding: 5px 7px;
+      font-size: .875rem;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .edit-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .btn-save {
+      background: #34c759; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 4px 10px; font-size: .8rem; cursor: pointer;
+    }
+    .btn-save:hover { background: #28b34b; }
+    .btn-cancel {
+      background: none; color: #6e6e73;
+      border: 1px solid #c7c7cc; border-radius: 6px;
+      padding: 4px 10px; font-size: .8rem; cursor: pointer;
+    }
+    .btn-cancel:hover { background: #f5f5f7; }
+
+    #empty-items {
+      text-align: center;
+      padding: 32px 0;
+      color: #6e6e73;
+      font-size: .9rem;
+    }
+
+    #find-similar-btn {
+      background: #007aff; color: #fff;
+      border: none; border-radius: 10px;
+      padding: 10px 18px; font-size: .9rem; font-family: inherit;
+      cursor: pointer; font-weight: 500;
+      transition: background .15s;
+    }
+    #find-similar-btn:hover { background: #006ee6; }
+    #find-similar-btn:disabled { background: #c7c7cc; cursor: default; }
+
+    #similar-panel { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    .cluster-card {
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cluster-label {
+      font-size: .7rem;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .cluster-names { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: #fff;
+      border: 1.5px solid #d1d1d6;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: .85rem;
+      cursor: pointer;
+      transition: border-color .12s, background .12s, color .12s;
+    }
+    .chip:hover { border-color: #007aff; }
+    .chip.selected { border-color: #007aff; background: #e8f0ff; color: #007aff; font-weight: 500; }
+
+    .cluster-footer { display: flex; align-items: center; gap: 10px; }
+    .btn-merge {
+      background: #007aff; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 7px 16px; font-size: .85rem; font-family: inherit;
+      cursor: pointer; font-weight: 500;
+      transition: background .15s;
+    }
+    .btn-merge:hover:not(:disabled) { background: #006ee6; }
+    .btn-merge:disabled { background: #c7c7cc; cursor: default; }
+    .merge-hint { font-size: .8rem; color: #6e6e73; }
+
+    #no-similar {
+      text-align: center;
+      padding: 16px 0;
+      color: #6e6e73;
+      font-size: .9rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1d1d1f;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: .875rem;
+      font-weight: 500;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.error { background: #ff3b30; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Receipt</span>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Scan</a>
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/items" class="nav-link active">Items</a>
+    </div>
+  </nav>
+
+  <div id="content">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Items</span>
+        <input id="search" type="search" placeholder="Filter…" oninput="filterTable(this.value)">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>#</th>
+            <th>Total Spent</th>
+          </tr>
+        </thead>
+        <tbody id="items-tbody"></tbody>
+      </table>
+      <div id="empty-items" style="display:none">No items yet. Scan a receipt to get started.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Find Similar</div>
+      <p style="font-size:.875rem;color:#6e6e73;margin-bottom:14px">
+        Groups item names that look similar so you can merge duplicates.
+      </p>
+      <button id="find-similar-btn" onclick="loadSimilar()">Find Similar Items</button>
+      <div id="similar-panel"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allItems = [];
+    let editingName = null;
+
+    async function loadItems() {
+      const res = await fetch('/api/items');
+      if (!res.ok) { showToast('Failed to load items', true); return; }
+      allItems = await res.json();
+      renderTable(allItems);
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('items-tbody');
+      const empty = document.getElementById('empty-items');
+
+      if (!items.length) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      tbody.innerHTML = items.map(item => {
+        const isEditing = item.name === editingName;
+        const nameCell = isEditing
+          ? `<div class="name-cell">
+               <input class="name-input" id="edit-input" value="${escHtml(item.name)}"
+                 onkeydown="handleEditKey(event, '${escJs(item.name)}')">
+               <div class="edit-actions">
+                 <button class="btn-save" onclick="commitRename('${escJs(item.name)}')">Save</button>
+                 <button class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+               </div>
+             </div>`
+          : `<div class="name-cell">
+               <span class="name-display" onclick="startEdit('${escJs(item.name)}')" title="Click to rename">${escHtml(item.name)}</span>
+             </div>`;
+
+        return `<tr>
+          <td>${nameCell}</td>
+          <td>${item.count}</td>
+          <td>$${item.total_spent.toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+
+      if (editingName) {
+        const input = document.getElementById('edit-input');
+        if (input) { input.focus(); input.select(); }
+      }
+    }
+
+    function filterTable(query) {
+      const q = query.toLowerCase();
+      renderTable(q ? allItems.filter(i => i.name.toLowerCase().includes(q)) : allItems);
+    }
+
+    function startEdit(name) {
+      editingName = name;
+      renderTable(currentFilter());
+    }
+
+    function cancelEdit() {
+      editingName = null;
+      renderTable(currentFilter());
+    }
+
+    function handleEditKey(e, oldName) {
+      if (e.key === 'Enter') commitRename(oldName);
+      if (e.key === 'Escape') cancelEdit();
+    }
+
+    async function commitRename(oldName) {
+      const input = document.getElementById('edit-input');
+      const newName = input ? input.value.trim() : '';
+      if (!newName || newName === oldName) { cancelEdit(); return; }
+      await doRename(oldName, newName);
+    }
+
+    async function doRename(oldName, newName) {
+      const res = await fetch('/api/items/rename', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_name: oldName, new_name: newName }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Rename failed', true);
+        return false;
+      }
+      const { updated } = await res.json();
+      editingName = null;
+      showToast(`Renamed ${updated} item${updated === 1 ? '' : 's'}`);
+      await loadItems();
+      return true;
+    }
+
+    async function loadSimilar() {
+      const btn = document.getElementById('find-similar-btn');
+      btn.disabled = true;
+      btn.textContent = 'Searching…';
+
+      const panel = document.getElementById('similar-panel');
+      panel.innerHTML = '';
+
+      const res = await fetch('/api/items/similar');
+      btn.disabled = false;
+      btn.textContent = 'Find Similar Items';
+
+      if (!res.ok) { showToast('Failed to find similar items', true); return; }
+      const clusters = await res.json();
+      renderSimilarPanel(clusters);
+    }
+
+    function renderSimilarPanel(clusters) {
+      const panel = document.getElementById('similar-panel');
+
+      if (!clusters.length) {
+        panel.innerHTML = '<div id="no-similar">No similar item names found.</div>';
+        return;
+      }
+
+      panel.innerHTML = clusters.map((names, ci) => {
+        const chips = names.map(n =>
+          `<span class="chip" data-cluster="${ci}" data-name="${escHtml(n)}" onclick="selectChip(this)">${escHtml(n)}</span>`
+        ).join('');
+        return `<div class="cluster-card">
+          <span class="cluster-label">Group ${ci + 1}</span>
+          <div class="cluster-names">${chips}</div>
+          <div class="cluster-footer">
+            <button class="btn-merge" data-cluster="${ci}" onclick="mergeCluster(this)" disabled>Merge into selected</button>
+            <span class="merge-hint">Select a name to keep</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function selectChip(chip) {
+      const ci = chip.dataset.cluster;
+      document.querySelectorAll(`.chip[data-cluster="${ci}"]`).forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      document.querySelector(`.btn-merge[data-cluster="${ci}"]`).disabled = false;
+    }
+
+    async function mergeCluster(btn) {
+      const ci = btn.dataset.cluster;
+      const selected = document.querySelector(`.chip[data-cluster="${ci}"].selected`);
+      if (!selected) return;
+
+      const targetName = selected.dataset.name;
+      const allChips = [...document.querySelectorAll(`.chip[data-cluster="${ci}"]`)];
+      const toRename = allChips.map(c => c.dataset.name).filter(n => n !== targetName);
+
+      btn.disabled = true;
+      btn.textContent = 'Merging…';
+
+      for (const name of toRename) {
+        const ok = await doRename(name, targetName);
+        if (!ok) { btn.disabled = false; btn.textContent = 'Merge into selected'; return; }
+      }
+
+      await loadSimilar();
+    }
+
+    function currentFilter() {
+      const q = document.getElementById('search').value.toLowerCase();
+      return q ? allItems.filter(i => i.name.toLowerCase().includes(q)) : allItems;
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '');
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escJs(s) {
+      return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    }
+
+    loadItems();
+  </script>
+</body>
+</html>

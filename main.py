@@ -17,3 +17,8 @@ async def index():
 @app.get("/dashboard")
 async def dashboard():
     return FileResponse("static/dashboard.html")
+
+
+@app.get("/items")
+async def items():
+    return FileResponse("static/items.html")

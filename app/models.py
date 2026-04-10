@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict
@@ -62,3 +62,14 @@ class Stats(BaseModel):
     price_by_categories: dict[str, float]
     top_items: list[TopItem]
     spending_over_time: list[tuple[date, float]]
+
+
+class ItemStat(BaseModel):
+    name: str
+    count: int
+    total_spent: float
+
+
+class RenameRequest(BaseModel):
+    old_name: str
+    new_name: str
