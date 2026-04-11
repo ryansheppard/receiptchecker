@@ -27,7 +27,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #007aff;
+    background: #0a84ff;
     color: #fff;
     border-radius: 12px;
     padding: 16px;
@@ -45,13 +45,13 @@
     align-items: center;
     gap: 12px;
     padding: 32px 0;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .9rem;
   }
   .spin {
     width: 36px; height: 36px;
-    border: 3px solid #d1d1d6;
-    border-top-color: #007aff;
+    border: 3px solid #3a3a3c;
+    border-top-color: #0a84ff;
     border-radius: 50%;
     animation: spin .8s linear infinite;
   }
@@ -70,25 +70,25 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: #1c1c1e;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4);
     font-size: .875rem;
   }
   th {
-    background: #f5f5f7;
+    background: #2c2c2e;
     padding: 10px 12px;
     text-align: left;
     font-weight: 600;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .75rem;
     text-transform: uppercase;
     letter-spacing: .04em;
   }
   td {
     padding: 4px 4px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #3a3a3c;
     vertical-align: middle;
   }
   td:last-child { text-align: center; }
@@ -105,21 +105,21 @@
     outline: none;
   }
   input[type="text"]:focus, input[type="number"]:focus {
-    background: #f0f6ff;
+    background: #1a2a3f;
   }
   input[type="number"] { width: 72px; text-align: right; }
 
-  tr.low-confidence { background: #fff3cd; outline: 2px solid #f59e0b; outline-offset: -2px; }
+  tr.low-confidence { background: #2a1f00; outline: 2px solid #ffa030; outline-offset: -2px; }
   tr.low-confidence td:first-child::before {
     content: "⚠ ";
-    color: #d97706;
+    color: #ffa030;
     font-size: .8rem;
   }
 
   .raw-name {
     display: block;
     padding: 6px 8px;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .8rem;
     white-space: nowrap;
   }
@@ -134,20 +134,20 @@
     border-radius: 6px;
     line-height: 1;
   }
-  button.del:hover { background: #fff0ef; }
+  button.del:hover { background: #3a1a18; }
 
   button.add-row {
     background: none;
-    border: 1px dashed #c7c7cc;
+    border: 1px dashed #48484a;
     border-radius: 8px;
     padding: 10px;
     width: 100%;
     cursor: pointer;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .875rem;
     transition: border-color .15s, color .15s;
   }
-  button.add-row:hover { border-color: #007aff; color: #007aff; }
+  button.add-row:hover { border-color: #0a84ff; color: #0a84ff; }
 
   .totals {
     display: flex;
@@ -177,11 +177,11 @@
     border-radius: 8px;
     padding: 8px 12px;
   }
-  .diff-row.ok { background: #f0fdf4; color: #16a34a; }
-  .diff-row.off { background: #fff0ef; color: #ff3b30; }
+  .diff-row.ok { background: #0d2a1a; color: #30d158; }
+  .diff-row.off { background: #3a1a18; color: #ff453a; }
 
   button.submit-btn {
-    background: #34c759;
+    background: #30d158;
     color: #fff;
     border: none;
     border-radius: 12px;
@@ -193,10 +193,10 @@
     transition: opacity .15s;
   }
   button.submit-btn:active { opacity: .75; }
-  button.submit-btn:disabled { background: #c7c7cc; cursor: default; }
+  button.submit-btn:disabled { background: #48484a; cursor: default; }
 
   #success-detail {
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .875rem;
     font-weight: 400;
   }
@@ -207,7 +207,7 @@
     align-items: center;
     gap: 12px;
     padding: 48px 0;
-    color: #34c759;
+    color: #30d158;
     font-size: 1rem;
     font-weight: 500;
   }
@@ -215,8 +215,8 @@
 
   #error-msg {
     display: none;
-    background: #fff0ef;
-    color: #ff3b30;
+    background: #3a1a18;
+    color: #ff453a;
     border-radius: 10px;
     padding: 12px 16px;
     font-size: .875rem;
@@ -266,7 +266,7 @@
         <span>Receipt Total</span>
         <input type="number" id="receipt-total" step="0.01" value="0.00">
       </div>
-      <div class="total-row" style="font-weight:400;font-size:.9rem;color:#6e6e73">
+      <div class="total-row" style="font-weight:400;font-size:.9rem;color:#8e8e93">
         <span>Items Sum</span>
         <span id="total-display">$0.00</span>
       </div>

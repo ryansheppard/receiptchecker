@@ -23,16 +23,17 @@
   .card-header .card-title { margin-bottom: 0; }
 
   input[type="search"], input[type="text"] {
-    border: 1.5px solid #d1d1d6;
+    border: 1.5px solid #38383a;
     border-radius: 8px;
     padding: 7px 11px;
     font-size: .875rem;
     font-family: inherit;
     outline: none;
-    background: #fff;
+    background: #1c1c1e;
+    color: #f5f5f7;
     transition: border-color .15s;
   }
-  input[type="search"]:focus, input[type="text"]:focus { border-color: #007aff; }
+  input[type="search"]:focus, input[type="text"]:focus { border-color: #0a84ff; }
 
   #search { width: 160px; }
 
@@ -45,7 +46,7 @@
     text-align: left;
     font-size: .7rem;
     font-weight: 600;
-    color: #6e6e73;
+    color: #8e8e93;
     text-transform: uppercase;
     letter-spacing: .04em;
     padding: 0 6px 10px;
@@ -55,7 +56,7 @@
 
   td {
     padding: 8px 6px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #3a3a3c;
     vertical-align: middle;
   }
 
@@ -67,11 +68,11 @@
     border-radius: 6px;
     transition: background .12s;
   }
-  .name-display:hover { background: #f5f5f7; }
+  .name-display:hover { background: #2c2c2e; }
 
   .name-input {
     flex: 1;
-    border: 1.5px solid #007aff;
+    border: 1.5px solid #0a84ff;
     border-radius: 6px;
     padding: 5px 7px;
     font-size: .875rem;
@@ -81,39 +82,39 @@
 
   .edit-actions { display: flex; gap: 4px; flex-shrink: 0; }
   .btn-save {
-    background: #34c759; color: #fff;
+    background: #30d158; color: #fff;
     border: none; border-radius: 6px;
     padding: 4px 10px; font-size: .8rem; cursor: pointer;
   }
-  .btn-save:hover { background: #28b34b; }
+  .btn-save:hover { background: #25a244; }
   .btn-cancel {
-    background: none; color: #6e6e73;
-    border: 1px solid #c7c7cc; border-radius: 6px;
+    background: none; color: #8e8e93;
+    border: 1px solid #48484a; border-radius: 6px;
     padding: 4px 10px; font-size: .8rem; cursor: pointer;
   }
-  .btn-cancel:hover { background: #f5f5f7; }
+  .btn-cancel:hover { background: #2c2c2e; }
 
   #empty-items {
     text-align: center;
     padding: 32px 0;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .9rem;
   }
 
   #find-similar-btn {
-    background: #007aff; color: #fff;
+    background: #0a84ff; color: #fff;
     border: none; border-radius: 10px;
     padding: 10px 18px; font-size: .9rem; font-family: inherit;
     cursor: pointer; font-weight: 500;
     transition: background .15s;
   }
-  #find-similar-btn:hover { background: #006ee6; }
-  #find-similar-btn:disabled { background: #c7c7cc; cursor: default; }
+  #find-similar-btn:hover { background: #0a84ff; }
+  #find-similar-btn:disabled { background: #48484a; cursor: default; }
 
   #similar-panel { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 
   .cluster-card {
-    background: #f5f5f7;
+    background: #2c2c2e;
     border-radius: 10px;
     padding: 12px 14px;
     display: flex;
@@ -123,39 +124,39 @@
   .cluster-label {
     font-size: .7rem;
     font-weight: 600;
-    color: #6e6e73;
+    color: #8e8e93;
     text-transform: uppercase;
     letter-spacing: .04em;
   }
   .cluster-names { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
-    background: #fff;
-    border: 1.5px solid #d1d1d6;
+    background: #3a3a3c;
+    border: 1.5px solid #48484a;
     border-radius: 20px;
     padding: 5px 12px;
     font-size: .85rem;
     cursor: pointer;
     transition: border-color .12s, background .12s, color .12s;
   }
-  .chip:hover { border-color: #007aff; }
-  .chip.selected { border-color: #007aff; background: #e8f0ff; color: #007aff; font-weight: 500; }
+  .chip:hover { border-color: #0a84ff; }
+  .chip.selected { border-color: #0a84ff; background: #1a2a4a; color: #0a84ff; font-weight: 500; }
 
   .cluster-footer { display: flex; align-items: center; gap: 10px; }
   .btn-merge {
-    background: #007aff; color: #fff;
+    background: #0a84ff; color: #fff;
     border: none; border-radius: 8px;
     padding: 7px 16px; font-size: .85rem; font-family: inherit;
     cursor: pointer; font-weight: 500;
     transition: background .15s;
   }
-  .btn-merge:hover:not(:disabled) { background: #006ee6; }
-  .btn-merge:disabled { background: #c7c7cc; cursor: default; }
-  .merge-hint { font-size: .8rem; color: #6e6e73; }
+  .btn-merge:hover:not(:disabled) { background: #0a84ff; }
+  .btn-merge:disabled { background: #48484a; cursor: default; }
+  .merge-hint { font-size: .8rem; color: #8e8e93; }
 
   #no-similar {
     text-align: center;
     padding: 16px 0;
-    color: #6e6e73;
+    color: #8e8e93;
     font-size: .9rem;
   }
 
@@ -164,7 +165,7 @@
     bottom: 28px;
     left: 50%;
     transform: translateX(-50%);
-    background: #1d1d1f;
+    background: #3a3a3c;
     color: #fff;
     padding: 10px 20px;
     border-radius: 20px;
@@ -208,7 +209,7 @@
 
     <div class="card">
       <div class="card-title">Find Similar</div>
-      <p style="font-size:.875rem;color:#6e6e73;margin-bottom:14px">
+      <p style="font-size:.875rem;color:#8e8e93;margin-bottom:14px">
         Groups item names that look similar so you can merge duplicates.
       </p>
       <button id="find-similar-btn" onclick="loadSimilar()">Find Similar Items</button>
