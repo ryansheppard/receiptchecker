@@ -16,7 +16,9 @@ async def index(request: Request):
 
 @app.get("/dashboard")
 async def dashboard(request: Request):
-    return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard"})
+    return templates.TemplateResponse(
+        request, "dashboard.html", {"active_page": "dashboard"}
+    )
 
 
 @app.get("/items")
