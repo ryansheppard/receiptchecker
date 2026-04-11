@@ -52,12 +52,9 @@ async def handle_submit(body: SubmitRequest) -> Receipt:
 @router.get("/stats")
 async def stats() -> Stats:
     with Session(engine) as session:
-        statement = select(Receipt)
-        receipts = session.exec(statement).all()
-
-        total_cost = sum([r.total for r in receipts])
-        receipt_count = len(receipts)
-        avg_cost = total_cost / receipt_count if receipt_count else 0.0
+        total_cost = session.exec(select(func.sum(Receipt.total))).first()
+        receipt_count = session.exec(select(func.count()).select_from(Receipt)).first()
+        avg_cost = session.exec(select(func.avg(Receipt.total))).first()
 
         price_by_categories = session.exec(
             select(Item.category, func.sum(Item.price))
@@ -96,9 +93,9 @@ async def stats() -> Stats:
 
         return Stats(
             summary=Summary(
-                total_spent=total_cost,
-                receipt_count=receipt_count,
-                avg_receipt_total=avg_cost,
+                total_spent=total_cost if total_cost else 0.0,
+                receipt_count=receipt_count if receipt_count else 0,
+                avg_receipt_total=avg_cost if avg_cost else 0.0,
                 most_common_category=top_category[0]
                 if top_category
                 else "No top category",
