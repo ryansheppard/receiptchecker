@@ -1,16 +1,14 @@
 import os
 from typing import cast
 
-import redis.asyncio as redis
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock, TextBlockParam
 
 from app.models import ParsedReceipt
 
-_FILES_BETA = "files-api-2025-04-14"
-
 anthropic_client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-redis_client = redis.Redis()
+
+_FILES_BETA = "files-api-2025-04-14"
 
 _TRANSCRIBE_PROMPT = (
     "Transcribe this receipt verbatim, preserving the exact layout including line breaks, "

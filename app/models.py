@@ -73,3 +73,9 @@ class ItemStat(BaseModel):
 class RenameRequest(BaseModel):
     old_name: str
     new_name: str
+
+
+class SubmitRequest(BaseModel):
+    total: float
+    confidence: float
+    items: list[ParsedItem]

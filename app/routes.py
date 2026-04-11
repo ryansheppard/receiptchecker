@@ -1,26 +1,28 @@
 import hashlib
 from datetime import date
 
+import redis.asyncio as redis
 from fastapi import APIRouter, HTTPException, UploadFile
-from pydantic import BaseModel
 from rapidfuzz import fuzz
 from sqlmodel import Session, func, select
 
-from app.anthropic import parse_receipt, redis_client
+from app.anthropic import parse_receipt
 from app.database import engine
 from app.models import (
     Item,
     ItemStat,
-    ParsedItem,
     ParsedReceipt,
     Receipt,
     RenameRequest,
     Stats,
+    SubmitRequest,
     Summary,
     TopItem,
 )
 
 router = APIRouter()
+
+redis_client = redis.Redis()
 
 
 @router.post("/receipt")
@@ -34,12 +36,6 @@ async def handle_receipt(file: UploadFile) -> ParsedReceipt:
     parsed = await parse_receipt(data, file.content_type or "image/jpeg")
     await redis_client.set(digest, parsed.model_dump_json(), 3600)
     return parsed
-
-
-class SubmitRequest(BaseModel):
-    total: float
-    confidence: float
-    items: list[ParsedItem]
 
 
 @router.post("/submit")
