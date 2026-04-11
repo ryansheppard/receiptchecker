@@ -1,6 +1,6 @@
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from app.routes import router
 
@@ -8,17 +8,19 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(router)
 
+templates = Jinja2Templates(directory="templates")
+
 
 @app.get("/")
-async def index():
-    return FileResponse("static/index.html")
+async def index(request: Request):
+    return templates.TemplateResponse(request, "index.html", {"active_page": "scan"})
 
 
 @app.get("/dashboard")
-async def dashboard():
-    return FileResponse("static/dashboard.html")
+async def dashboard(request: Request):
+    return templates.TemplateResponse(request, "dashboard.html", {"active_page": "dashboard"})
 
 
 @app.get("/items")
-async def items():
-    return FileResponse("static/items.html")
+async def items(request: Request):
+    return templates.TemplateResponse(request, "items.html", {"active_page": "items"})
