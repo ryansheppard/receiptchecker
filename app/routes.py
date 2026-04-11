@@ -1,13 +1,22 @@
 import hashlib
-from datetime import date
 
 import redis.asyncio as redis
 from fastapi import APIRouter, HTTPException, UploadFile
 from rapidfuzz import fuzz
-from sqlmodel import Session, func, select
+from sqlmodel import Session
 
 from app.anthropic import parse_receipt
-from app.database import engine
+from app.database import (
+    engine,
+    get_all_items,
+    get_distinct_item_names,
+    get_price_by_categories,
+    get_receipt_summary,
+    get_spending_over_time,
+    get_top_items,
+    rename_items_by_name,
+    save_receipt,
+)
 from app.models import (
     Item,
     ItemStat,
@@ -16,8 +25,6 @@ from app.models import (
     RenameRequest,
     Stats,
     SubmitRequest,
-    Summary,
-    TopItem,
 )
 
 router = APIRouter()
@@ -43,83 +50,24 @@ async def handle_submit(body: SubmitRequest) -> Receipt:
     receipt = Receipt(total=body.total, confidence=body.confidence)
     receipt.items = [Item(**item.model_dump()) for item in body.items]
     with Session(engine) as session:
-        session.add(receipt)
-        session.commit()
-        session.refresh(receipt)
-    return receipt
+        return save_receipt(session, receipt)
 
 
 @router.get("/stats")
 async def stats() -> Stats:
     with Session(engine) as session:
-        total_cost = session.exec(select(func.sum(Receipt.total))).first()
-        receipt_count = session.exec(select(func.count()).select_from(Receipt)).first()
-        avg_cost = session.exec(select(func.avg(Receipt.total))).first()
-
-        price_by_categories = session.exec(
-            select(Item.category, func.sum(Item.price))
-            .where(Item.price > 0)
-            .where(Item.category != "tax")
-            .group_by(Item.category)
-        ).all()
-
-        top_items = session.exec(
-            select(Item.name, func.sum(Item.price), func.count())
-            .where(Item.price > 0)
-            .where(Item.category != "tax")
-            .group_by(Item.name)
-            .order_by(func.sum(Item.price).desc())
-            .limit(10)
-        ).all()
-
-        top_category = session.exec(
-            select(Item.category, func.count())
-            .group_by(Item.category)
-            .order_by(func.count().desc())
-            .limit(1)
-        ).first()
-
-        finalized_items: list[TopItem] = []
-        for item in top_items:
-            finalized_items.append(
-                TopItem(name=item[0], total_spent=item[1], times_purchased=item[2])
-            )
-
-        spending_over_time = session.exec(
-            select(func.date(Receipt.submitted_at), func.sum(Receipt.total))
-            .group_by(func.date(Receipt.submitted_at))
-            .order_by(func.date(Receipt.submitted_at))
-        ).all()
-
         return Stats(
-            summary=Summary(
-                total_spent=total_cost if total_cost else 0.0,
-                receipt_count=receipt_count if receipt_count else 0,
-                avg_receipt_total=avg_cost if avg_cost else 0.0,
-                most_common_category=top_category[0]
-                if top_category
-                else "No top category",
-            ),
-            price_by_categories=dict(price_by_categories),
-            top_items=finalized_items,
-            spending_over_time=[
-                (date.fromisoformat(row[0]), row[1]) for row in spending_over_time
-            ],
+            summary=get_receipt_summary(session),
+            price_by_categories=get_price_by_categories(session),
+            top_items=get_top_items(session),
+            spending_over_time=get_spending_over_time(session),
         )
 
 
 @router.get("/api/items")
 async def items() -> list[ItemStat]:
     with Session(engine) as session:
-        rows = session.exec(
-            select(Item.name, func.count(), func.sum(Item.price))
-            .group_by(Item.name)
-            .order_by(Item.name)
-        ).all()
-
-        return [
-            ItemStat(name=r[0], count=r[1], total_spent=round(r[2], 2)) for r in rows
-        ]
+        return get_all_items(session)
 
 
 @router.patch("/api/items/rename")
@@ -128,18 +76,13 @@ async def rename_items(body: RenameRequest) -> dict[str, int]:
     if not new_name:
         raise HTTPException(status_code=422, detail="new_name must not be empty")
     with Session(engine) as session:
-        items = session.exec(select(Item).where(Item.name == body.old_name)).all()
-        for item in items:
-            item.name = new_name
-            session.add(item)
-        session.commit()
-    return {"updated": len(items)}
+        return {"updated": rename_items_by_name(session, body.old_name, new_name)}
 
 
 @router.get("/api/items/similar")
 async def similar_items(threshold: float = 80) -> list[list[str]]:
     with Session(engine) as session:
-        names = session.exec(select(Item.name).distinct().order_by(Item.name)).all()
+        names = get_distinct_item_names(session)
 
     n = len(names)
     adj: dict[int, set[int]] = {i: set() for i in range(n)}
