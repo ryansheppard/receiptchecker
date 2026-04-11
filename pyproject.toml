@@ -26,3 +26,7 @@ exclude = ["migrations/versions"]
 
 [tool.ty.src]
 exclude = ["migrations/versions"]
+
+[tool.pyright]
+venvPath= "."
+venv= ".venv"
