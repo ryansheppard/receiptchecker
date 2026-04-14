@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -13,6 +13,11 @@ class ParsedItem(BaseModel):
     category: str
     raw: str
     confidence: float
+
+    @field_validator("category")
+    @classmethod
+    def lowercase_category(cls, v: str) -> str:
+        return v.lower()
 
 
 class ParsedReceipt(BaseModel):
@@ -42,6 +47,11 @@ class Item(SQLModel, table=True):
     raw: str
     confidence: float
     receipt: Receipt | None = Relationship(back_populates="items")
+
+    @field_validator("category")
+    @classmethod
+    def lowercase_category(cls, v: str) -> str:
+        return v.lower()
 
 
 class Summary(BaseModel):
