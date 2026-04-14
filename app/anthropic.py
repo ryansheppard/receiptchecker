@@ -63,7 +63,7 @@ async def parse_receipt(data: bytes, content_type: str) -> ParsedReceipt:
 
     message = await anthropic_client.messages.create(
         model="claude-haiku-4-5",
-        max_tokens=1024,
+        max_tokens=4096,
         extra_body={
             "output_config": {
                 "format": {
