@@ -3,7 +3,7 @@ import hashlib
 import redis.asyncio as redis
 from fastapi import APIRouter, HTTPException, UploadFile
 from rapidfuzz import fuzz
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
 from app.anthropic import parse_receipt
 from app.database import (
@@ -25,6 +25,7 @@ from app.models import (
     ParsedReceipt,
     Receipt,
     ReceiptItem,
+    ReceiptOut,
     ReceiptWithItems,
     RenameRequest,
     Stats,
@@ -51,11 +52,17 @@ async def handle_receipt(file: UploadFile) -> ParsedReceipt:
 
 
 @router.post("/submit")
-async def handle_submit(body: SubmitRequest) -> Receipt:
+async def handle_submit(body: SubmitRequest) -> ReceiptOut:
     receipt = Receipt(total=body.total, confidence=body.confidence)
     receipt.items = [Item(**item.model_dump()) for item in body.items]
     with Session(engine) as session:
-        return save_receipt(session, receipt)
+        saved = save_receipt(session, receipt)
+        return ReceiptOut(
+            id=saved.id,
+            total=saved.total,
+            confidence=saved.confidence,
+            submitted_at=saved.submitted_at,
+        )
 
 
 @router.get("/stats")

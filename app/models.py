@@ -2,7 +2,12 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class ParsedItem(BaseModel):
@@ -28,30 +33,31 @@ class ParsedReceipt(BaseModel):
     confidence: float
 
 
-class Receipt(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    total: float
-    items: list["Item"] = Relationship(back_populates="receipt")
-    confidence: float
-    submitted_at: datetime = Field(
-        default_factory=lambda: datetime.now(ZoneInfo("America/New_York"))
+class Receipt(Base):
+    __tablename__ = "receipt"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    total: Mapped[float]
+    confidence: Mapped[float]
+    submitted_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(ZoneInfo("America/New_York"))
     )
+    items: Mapped[list["Item"]] = relationship(back_populates="receipt")
 
 
-class Item(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    receipt_id: int | None = Field(default=None, foreign_key="receipt.id")
-    name: str
-    price: float
-    category: str
-    raw: str
-    confidence: float
-    receipt: Receipt | None = Relationship(back_populates="items")
+class Item(Base):
+    __tablename__ = "item"
 
-    @field_validator("category", "name")
-    @classmethod
-    def lowercase_category(cls, v: str) -> str:
-        return v.lower()
+    id: Mapped[int] = mapped_column(primary_key=True)
+    receipt_id: Mapped[int | None] = mapped_column(
+        ForeignKey("receipt.id"), default=None
+    )
+    name: Mapped[str]
+    price: Mapped[float]
+    category: Mapped[str]
+    raw: Mapped[str]
+    confidence: Mapped[float]
+    receipt: Mapped["Receipt | None"] = relationship(back_populates="items")
 
 
 class Summary(BaseModel):
@@ -115,3 +121,10 @@ class ReceiptWithItems(BaseModel):
     total: float
     confidence: float
     items: list[ReceiptItem]
+
+
+class ReceiptOut(BaseModel):
+    id: int
+    total: float
+    confidence: float
+    submitted_at: datetime
