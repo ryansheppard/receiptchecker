@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Receipts · Receipt{% endblock %}
+
+{% block styles %}
+<style>
+  nav { max-width: 480px; }
+
+  #content {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .receipt-card {
+    background: #1c1c1e;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.4);
+    overflow: hidden;
+  }
+
+  .receipt-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .receipt-header:hover { background: #2c2c2e; }
+
+  .receipt-date {
+    font-size: .85rem;
+    color: #8e8e93;
+    flex: 1;
+  }
+
+  .receipt-total {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f5f5f7;
+  }
+
+  .receipt-count {
+    font-size: .75rem;
+    font-weight: 500;
+    color: #8e8e93;
+    background: #3a3a3c;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+
+  .receipt-chevron {
+    color: #8e8e93;
+    font-size: .75rem;
+    transition: transform .2s;
+  }
+  .receipt-card.open .receipt-chevron { transform: rotate(180deg); }
+
+  .receipt-body {
+    display: none;
+    padding: 0 20px 16px;
+  }
+  .receipt-card.open .receipt-body { display: block; }
+
+  .category-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .chip {
+    font-size: .72rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: #3a3a3c;
+    color: #f5f5f7;
+  }
+  .chip span { color: #8e8e93; margin-left: 4px; }
+
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+  }
+  .items-table th {
+    text-align: left;
+    color: #8e8e93;
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 0 0 8px;
+  }
+  .items-table th:last-child,
+  .items-table td:last-child { text-align: right; }
+  .items-table td {
+    padding: 5px 0;
+    color: #f5f5f7;
+    border-top: 1px solid #2c2c2e;
+  }
+  .items-table td.category {
+    color: #8e8e93;
+    font-size: .78rem;
+  }
+
+  .low-confidence {
+    font-size: .72rem;
+    color: #ff9500;
+    margin-top: 10px;
+  }
+
+  #empty {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 64px 0;
+    color: #8e8e93;
+    font-size: .95rem;
+    text-align: center;
+  }
+  #empty a {
+    color: #0a84ff;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  #empty a:hover { text-decoration: underline; }
+
+  @media (min-width: 900px) {
+    nav, #content { max-width: 960px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div id="content">
+    <div id="receipt-list"></div>
+    <div id="empty">
+      <span>No receipts yet.</span>
+      <a href="/">Scan your first receipt →</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function load() {
+    const res = await fetch('/api/receipts');
+    const receipts = await res.json();
+
+    if (!receipts.length) {
+      document.getElementById('empty').style.display = 'flex';
+      return;
+    }
+
+    const list = document.getElementById('receipt-list');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+    receipts.forEach(r => list.appendChild(buildCard(r)));
+  }
+
+  function buildCard(r) {
+    const itemCount = r.items.length;
+    const date = new Date(r.submitted_at).toLocaleDateString(undefined, {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+
+    const categories = {};
+    r.items.forEach(i => {
+      categories[i.category] = (categories[i.category] || 0) + i.price;
+    });
+
+    const card = document.createElement('div');
+    card.className = 'receipt-card';
+    card.innerHTML = `
+      <div class="receipt-header">
+        <span class="receipt-date">${date}</span>
+        <span class="receipt-total">$${r.total.toFixed(2)}</span>
+        <span class="receipt-count">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+        <span class="receipt-chevron">▼</span>
+      </div>
+      <div class="receipt-body">
+        <div class="category-chips">
+          ${Object.entries(categories)
+            .filter(([k]) => k !== 'tax')
+            .sort((a, b) => b[1] - a[1])
+            .map(([k, v]) => `<div class="chip">${k}<span>$${v.toFixed(2)}</span></div>`)
+            .join('')}
+        </div>
+        <table class="items-table">
+          <thead>
+            <tr><th>Item</th><th>Category</th><th>Price</th></tr>
+          </thead>
+          <tbody>
+            ${r.items.map(i => `
+              <tr>
+                <td>${escHtml(i.name)}</td>
+                <td class="category">${escHtml(i.category)}</td>
+                <td>${i.price >= 0 ? '$' + i.price.toFixed(2) : '−$' + Math.abs(i.price).toFixed(2)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        ${r.confidence < 0.8 ? `<div class="low-confidence">⚠ Low confidence scan (${Math.round(r.confidence * 100)}%)</div>` : ''}
+      </div>
+    `;
+
+    card.querySelector('.receipt-header').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+
+    return card;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  load();
+</script>
+{% endblock %}

@@ -24,3 +24,10 @@ async def dashboard(request: Request):
 @app.get("/items")
 async def items(request: Request):
     return templates.TemplateResponse(request, "items.html", {"active_page": "items"})
+
+
+@app.get("/receipts")
+async def receipts(request: Request):
+    return templates.TemplateResponse(
+        request, "receipts.html", {"active_page": "receipts"}
+    )

@@ -12,6 +12,7 @@ from app.database import (
     get_distinct_item_names,
     get_price_by_categories,
     get_receipt_summary,
+    get_receipts_with_items,
     get_spending_over_time,
     get_top_items,
     rename_items_by_name,
@@ -22,6 +23,7 @@ from app.models import (
     ItemStat,
     ParsedReceipt,
     Receipt,
+    ReceiptWithItems,
     RenameRequest,
     Stats,
     SubmitRequest,
@@ -110,3 +112,11 @@ async def similar_items(threshold: float = 80) -> list[list[str]]:
             clusters.append(sorted(component))
 
     return clusters
+
+
+@router.get("/api/receipts")
+async def get_receipts() -> list[ReceiptWithItems]:
+    with Session(engine) as session:
+        receipts = get_receipts_with_items(session)
+
+    return receipts

@@ -89,3 +89,17 @@ class SubmitRequest(BaseModel):
     total: float
     confidence: float
     items: list[ParsedItem]
+
+
+class ReceiptItem(BaseModel):
+    name: str
+    price: float
+    category: str
+
+
+class ReceiptWithItems(BaseModel):
+    id: int
+    submitted_at: datetime
+    total: float
+    confidence: float
+    items: list[ReceiptItem]

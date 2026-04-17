@@ -1,8 +1,17 @@
 from datetime import date
 
-from sqlmodel import Session, create_engine, func, select
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, col, create_engine, func, select
 
-from app.models import Item, ItemStat, Receipt, Summary, TopItem
+from app.models import (
+    Item,
+    ItemStat,
+    Receipt,
+    ReceiptItem,
+    ReceiptWithItems,
+    Summary,
+    TopItem,
+)
 
 engine = create_engine("sqlite:///sqlite.db")
 
@@ -83,3 +92,25 @@ def rename_items_by_name(session: Session, old_name: str, new_name: str) -> int:
 
 def get_distinct_item_names(session: Session) -> list[str]:
     return list(session.exec(select(Item.name).distinct().order_by(Item.name)).all())
+
+
+def get_receipts_with_items(session: Session) -> list[ReceiptWithItems]:
+    receipts_with_items = session.exec(
+        select(Receipt)
+        .options(selectinload(Receipt.items))  # ty: ignore[invalid-argument-type]
+        .order_by(col(Receipt.submitted_at).desc())
+    ).all()
+
+    return [
+        ReceiptWithItems(
+            id=r.id or 0,
+            submitted_at=r.submitted_at,
+            total=r.total,
+            confidence=r.confidence,
+            items=[
+                ReceiptItem(name=i.name, price=i.price, category=i.category)
+                for i in r.items
+            ],
+        )
+        for r in receipts_with_items
+    ]
