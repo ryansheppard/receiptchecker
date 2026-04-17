@@ -14,7 +14,7 @@ class ParsedItem(BaseModel):
     raw: str
     confidence: float
 
-    @field_validator("category")
+    @field_validator("category", "name")
     @classmethod
     def lowercase_category(cls, v: str) -> str:
         return v.lower()
@@ -48,7 +48,7 @@ class Item(SQLModel, table=True):
     confidence: float
     receipt: Receipt | None = Relationship(back_populates="items")
 
-    @field_validator("category")
+    @field_validator("category", "name")
     @classmethod
     def lowercase_category(cls, v: str) -> str:
         return v.lower()
@@ -103,7 +103,7 @@ class UpdateItemRequest(BaseModel):
     price: float
     category: str
 
-    @field_validator("category")
+    @field_validator("category", "name")
     @classmethod
     def lowercase_category(cls, v: str) -> str:
         return v.lower()
