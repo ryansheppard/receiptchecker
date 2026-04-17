@@ -92,9 +92,21 @@ class SubmitRequest(BaseModel):
 
 
 class ReceiptItem(BaseModel):
+    id: int
     name: str
     price: float
     category: str
+
+
+class UpdateItemRequest(BaseModel):
+    name: str
+    price: float
+    category: str
+
+    @field_validator("category")
+    @classmethod
+    def lowercase_category(cls, v: str) -> str:
+        return v.lower()
 
 
 class ReceiptWithItems(BaseModel):

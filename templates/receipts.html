@@ -107,6 +107,47 @@
     font-size: .78rem;
   }
 
+  .items-table tr.display-row:hover td { background: #2c2c2e; cursor: pointer; }
+
+  .items-table tr.edit-row td {
+    padding: 6px 0;
+    vertical-align: middle;
+  }
+  .items-table tr.edit-row input {
+    background: #2c2c2e;
+    border: 1px solid #48484a;
+    border-radius: 6px;
+    color: #f5f5f7;
+    font-size: .85rem;
+    padding: 3px 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .items-table tr.edit-row input:focus {
+    outline: none;
+    border-color: #0a84ff;
+  }
+  .items-table tr.edit-row input[type=number] { text-align: right; }
+
+  .edit-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+  .edit-actions button {
+    font-size: .75rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-save { background: #0a84ff; color: #fff; }
+  .btn-save:hover { background: #0070d8; }
+  .btn-cancel { background: #3a3a3c; color: #f5f5f7; }
+  .btn-cancel:hover { background: #48484a; }
+
   .low-confidence {
     font-size: .72rem;
     color: #ff9500;
@@ -168,54 +209,163 @@
       month: 'short', day: 'numeric', year: 'numeric',
     });
 
-    const categories = {};
-    r.items.forEach(i => {
-      categories[i.category] = (categories[i.category] || 0) + i.price;
-    });
-
     const card = document.createElement('div');
     card.className = 'receipt-card';
-    card.innerHTML = `
-      <div class="receipt-header">
-        <span class="receipt-date">${date}</span>
-        <span class="receipt-total">$${r.total.toFixed(2)}</span>
-        <span class="receipt-count">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
-        <span class="receipt-chevron">▼</span>
-      </div>
-      <div class="receipt-body">
-        <div class="category-chips">
-          ${Object.entries(categories)
-            .filter(([k]) => k !== 'tax')
-            .sort((a, b) => b[1] - a[1])
-            .map(([k, v]) => `<div class="chip">${k}<span>$${v.toFixed(2)}</span></div>`)
-            .join('')}
-        </div>
-        <table class="items-table">
-          <thead>
-            <tr><th>Item</th><th>Category</th><th>Price</th></tr>
-          </thead>
-          <tbody>
-            ${r.items.map(i => `
-              <tr>
-                <td>${escHtml(i.name)}</td>
-                <td class="category">${escHtml(i.category)}</td>
-                <td>${i.price >= 0 ? '$' + i.price.toFixed(2) : '−$' + Math.abs(i.price).toFixed(2)}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-        ${r.confidence < 0.8 ? `<div class="low-confidence">⚠ Low confidence scan (${Math.round(r.confidence * 100)}%)</div>` : ''}
-      </div>
+
+    const header = document.createElement('div');
+    header.className = 'receipt-header';
+    header.innerHTML = `
+      <span class="receipt-date">${date}</span>
+      <span class="receipt-total">$${r.total.toFixed(2)}</span>
+      <span class="receipt-count">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+      <span class="receipt-chevron">▼</span>
     `;
+    header.addEventListener('click', () => card.classList.toggle('open'));
 
-    card.querySelector('.receipt-header').addEventListener('click', () => {
-      card.classList.toggle('open');
-    });
+    const body = document.createElement('div');
+    body.className = 'receipt-body';
 
+    const chipsEl = document.createElement('div');
+    chipsEl.className = 'category-chips';
+
+    const table = document.createElement('table');
+    table.className = 'items-table';
+    table.innerHTML = '<thead><tr><th>Item</th><th>Category</th><th>Price</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+
+    function rebuildChips() {
+      const categories = {};
+      r.items.forEach(i => {
+        categories[i.category] = (categories[i.category] || 0) + i.price;
+      });
+      chipsEl.innerHTML = Object.entries(categories)
+        .filter(([k]) => k !== 'tax')
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `<div class="chip">${escHtml(k)}<span>$${v.toFixed(2)}</span></div>`)
+        .join('');
+    }
+
+    function buildDisplayRow(item, idx) {
+      const tr = document.createElement('tr');
+      tr.className = 'display-row';
+      tr.innerHTML = `
+        <td>${escHtml(item.name)}</td>
+        <td class="category">${escHtml(item.category)}</td>
+        <td>${item.price >= 0 ? '$' + item.price.toFixed(2) : '−$' + Math.abs(item.price).toFixed(2)}</td>
+      `;
+      tr.addEventListener('click', () => switchToEdit(tr, item, idx, r.id));
+      return tr;
+    }
+
+    function switchToEdit(displayRow, item, idx, receiptId) {
+      const tr = document.createElement('tr');
+      tr.className = 'edit-row';
+      tr.innerHTML = `
+        <td><input type="text" value="${escAttr(item.name)}"></td>
+        <td><input type="text" value="${escAttr(item.category)}"></td>
+        <td><input type="number" step="0.01" value="${item.price.toFixed(2)}"></td>
+      `;
+
+      const actionsRow = document.createElement('tr');
+      actionsRow.className = 'edit-row';
+      actionsRow.innerHTML = `<td colspan="3"><div class="edit-actions">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-save">Save</button>
+      </div></td>`;
+
+      displayRow.replaceWith(tr);
+      tr.after(actionsRow);
+
+      const [nameInput, catInput, priceInput] = tr.querySelectorAll('input');
+      nameInput.focus();
+      nameInput.select();
+
+      function cancel() {
+        const newDisplay = buildDisplayRow(item, idx);
+        actionsRow.remove();
+        tr.replaceWith(newDisplay);
+      }
+
+      async function save() {
+        const newName = nameInput.value.trim();
+        const newCat = catInput.value.trim().toLowerCase();
+        const newPrice = parseFloat(priceInput.value);
+
+        if (!newName) { nameInput.focus(); return; }
+        if (isNaN(newPrice)) { priceInput.focus(); return; }
+
+        try {
+          const res = await fetch(`/api/receipts/${receiptId}/items/${item.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName, category: newCat, price: newPrice }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Save failed', true);
+            return;
+          }
+          const updated = await res.json();
+          item.name = updated.name;
+          item.category = updated.category;
+          item.price = updated.price;
+          r.items[idx] = item;
+          rebuildChips();
+          const newDisplay = buildDisplayRow(item, idx);
+          actionsRow.remove();
+          tr.replaceWith(newDisplay);
+        } catch {
+          showToast('Network error', true);
+        }
+      }
+
+      actionsRow.querySelector('.btn-cancel').addEventListener('click', cancel);
+      actionsRow.querySelector('.btn-save').addEventListener('click', save);
+      tr.addEventListener('keydown', e => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') cancel();
+      });
+      actionsRow.addEventListener('keydown', e => {
+        if (e.key === 'Escape') cancel();
+      });
+    }
+
+    r.items.forEach((item, idx) => tbody.appendChild(buildDisplayRow(item, idx)));
+    rebuildChips();
+
+    body.appendChild(chipsEl);
+    body.appendChild(table);
+
+    if (r.confidence < 0.8) {
+      const warn = document.createElement('div');
+      warn.className = 'low-confidence';
+      warn.textContent = `⚠ Low confidence scan (${Math.round(r.confidence * 100)}%)`;
+      body.appendChild(warn);
+    }
+
+    card.appendChild(header);
+    card.appendChild(body);
     return card;
   }
 
+  function showToast(msg, isError = false) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:${isError ? '#ff3b30' : '#30d158'};color:#fff;padding:10px 20px;
+      border-radius:10px;font-size:.85rem;font-weight:500;z-index:9999;
+      box-shadow:0 2px 8px rgba(0,0,0,.4)`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
   function escHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function escAttr(str) {
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   }
 
   load();

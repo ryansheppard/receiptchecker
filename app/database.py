@@ -11,6 +11,7 @@ from app.models import (
     ReceiptWithItems,
     Summary,
     TopItem,
+    UpdateItemRequest,
 )
 
 engine = create_engine("sqlite:///sqlite.db")
@@ -90,6 +91,23 @@ def rename_items_by_name(session: Session, old_name: str, new_name: str) -> int:
     return len(items)
 
 
+def update_item(
+    session: Session, receipt_id: int, item_id: int, data: UpdateItemRequest
+) -> Item | None:
+    item = session.exec(
+        select(Item).where(Item.id == item_id, Item.receipt_id == receipt_id)
+    ).first()
+    if item is None:
+        return None
+    item.name = data.name.strip()
+    item.price = data.price
+    item.category = data.category
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
 def get_distinct_item_names(session: Session) -> list[str]:
     return list(session.exec(select(Item.name).distinct().order_by(Item.name)).all())
 
@@ -108,7 +126,9 @@ def get_receipts_with_items(session: Session) -> list[ReceiptWithItems]:
             total=r.total,
             confidence=r.confidence,
             items=[
-                ReceiptItem(name=i.name, price=i.price, category=i.category)
+                ReceiptItem(
+                    id=i.id or 0, name=i.name, price=i.price, category=i.category
+                )
                 for i in r.items
             ],
         )

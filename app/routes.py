@@ -17,16 +17,19 @@ from app.database import (
     get_top_items,
     rename_items_by_name,
     save_receipt,
+    update_item,
 )
 from app.models import (
     Item,
     ItemStat,
     ParsedReceipt,
     Receipt,
+    ReceiptItem,
     ReceiptWithItems,
     RenameRequest,
     Stats,
     SubmitRequest,
+    UpdateItemRequest,
 )
 
 router = APIRouter()
@@ -120,3 +123,18 @@ async def get_receipts() -> list[ReceiptWithItems]:
         receipts = get_receipts_with_items(session)
 
     return receipts
+
+
+@router.patch("/api/receipts/{receipt_id}/items/{item_id}")
+async def update_receipt_item(
+    receipt_id: int, item_id: int, body: UpdateItemRequest
+) -> ReceiptItem:
+    if not body.name.strip():
+        raise HTTPException(status_code=422, detail="name must not be empty")
+    with Session(engine) as session:
+        item = update_item(session, receipt_id, item_id, body)
+    if item is None:
+        raise HTTPException(status_code=404, detail="item not found")
+    return ReceiptItem(
+        id=item.id or 0, name=item.name, price=item.price, category=item.category
+    )
