@@ -23,14 +23,45 @@
       width: 100%;
       max-width: 640px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      align-items: stretch;
       margin-bottom: 24px;
     }
+    .nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     .nav-brand { font-size: 1.1rem; font-weight: 700; color: #f5f5f7; }
-    .nav-links { display: flex; gap: 4px; }
+    .nav-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      color: #8e8e93;
+      transition: background .15s, color .15s;
+    }
+    .nav-toggle:hover { background: #2c2c2e; color: #f5f5f7; }
+    .nav-links {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .2s ease;
+      padding-top: 0;
+    }
+    nav.open .nav-links {
+      display: flex;
+      max-height: 200px;
+      padding-top: 8px;
+    }
     .nav-link {
-      padding: 6px 14px;
+      padding: 10px 14px;
       border-radius: 8px;
       font-size: .9rem;
       font-weight: 500;
@@ -57,15 +88,36 @@
     }
 
     @media (min-width: 900px) {
-      nav { max-width: 960px; }
+      nav {
+        max-width: 960px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nav-toggle { display: none; }
+      .nav-links {
+        display: flex !important;
+        flex-direction: row;
+        max-height: none;
+        padding-top: 0;
+      }
     }
   </style>
   {% block styles %}{% endblock %}
 </head>
 <body>
-  <nav>
-    <span class="nav-brand">Receipt</span>
-    <div class="nav-links">
+  <nav id="mainNav">
+    <div class="nav-header">
+      <span class="nav-brand">Receipt</span>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <rect y="3" width="20" height="2" rx="1"/>
+          <rect y="9" width="20" height="2" rx="1"/>
+          <rect y="15" width="20" height="2" rx="1"/>
+        </svg>
+      </button>
+    </div>
+    <div class="nav-links" id="navLinks">
       <a href="/" class="nav-link{{ ' active' if active_page == 'scan' else '' }}">Scan</a>
       <a href="/dashboard" class="nav-link{{ ' active' if active_page == 'dashboard' else '' }}">Dashboard</a>
       <a href="/receipts" class="nav-link{{ ' active' if active_page == 'receipts' else '' }}">Receipts</a>
@@ -76,5 +128,13 @@
   {% block content %}{% endblock %}
 
   {% block scripts %}{% endblock %}
+  <script>
+    const navToggle = document.getElementById('navToggle');
+    const mainNav = document.getElementById('mainNav');
+    navToggle.addEventListener('click', () => mainNav.classList.toggle('open'));
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => mainNav.classList.remove('open'));
+    });
+  </script>
 </body>
 </html>
